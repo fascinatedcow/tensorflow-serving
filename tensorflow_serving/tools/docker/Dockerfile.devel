@@ -13,8 +13,8 @@
 # limitations under the License.
 FROM ubuntu:18.04 as base_build
 
-ARG TF_SERVING_VERSION_GIT_BRANCH=master
-ARG TF_SERVING_VERSION_GIT_COMMIT=HEAD
+ARG TF_SERVING_VERSION_GIT_BRANCH=2.9.3
+ARG TF_SERVING_VERSION_GIT_COMMIT=2.9.3
 
 LABEL maintainer=gvasudevan@google.com
 LABEL tensorflow_serving_github_branchtag=${TF_SERVING_VERSION_GIT_BRANCH}
@@ -76,16 +76,12 @@ RUN pip3 --no-cache-dir install \
     --ignore-installed six>=1.12.0
 
 # Set up Bazel
-ENV BAZEL_VERSION 5.1.1
+ENV USE_BAZEL_VERSION 5.1.1
 WORKDIR /
 RUN mkdir /bazel && \
     cd /bazel && \
-    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
-    chmod +x bazel-*.sh && \
-    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    cd / && \
-    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+    wget https://github.com/bazelbuild/bazelisk/releases/download/v1.16.0/bazelisk-linux-arm64 && \
+    chmod +x bazelisk-linux-arm64
 
 # Download TF Serving sources (optionally at specific commit).
 WORKDIR /tensorflow-serving
@@ -98,7 +94,7 @@ RUN echo "Building with build options: ${TF_SERVING_BUILD_OPTIONS}"
 ARG TF_SERVING_BAZEL_OPTIONS=""
 RUN echo "Building with Bazel options: ${TF_SERVING_BAZEL_OPTIONS}"
 
-RUN bazel build --color=yes --curses=yes \
+RUN /bazel/bazelisk-linux-arm64 build --color=yes --curses=yes \
     ${TF_SERVING_BAZEL_OPTIONS} \
     --verbose_failures \
     --output_filter=DONT_MATCH_ANYTHING \
@@ -108,7 +104,7 @@ RUN bazel build --color=yes --curses=yes \
     /usr/local/bin/
 
 # Build and install TensorFlow Serving API
-RUN bazel build --color=yes --curses=yes \
+RUN /bazel/bazelisk-linux-arm64 build --color=yes --curses=yes \
     ${TF_SERVING_BAZEL_OPTIONS} \
     --verbose_failures \
     --output_filter=DONT_MATCH_ANYTHING \
@@ -122,6 +118,6 @@ RUN bazel build --color=yes --curses=yes \
 
 FROM binary_build as clean_build
 # Clean up Bazel cache when done.
-RUN bazel clean --expunge --color=yes && \
+RUN /bazel/bazelisk-linux-arm64 clean --expunge --color=yes && \
     rm -rf /root/.cache
 CMD ["/bin/bash"]

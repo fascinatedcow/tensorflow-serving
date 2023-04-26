@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG TF_SERVING_VERSION=latest
-ARG TF_SERVING_BUILD_IMAGE=tensorflow/serving:${TF_SERVING_VERSION}-devel
+ARG TF_SERVING_VERSION=2.9.3
+ARG TF_SERVING_BUILD_IMAGE=tensorflow/serving:${TF_SERVING_VERSION}-build
 
 FROM ${TF_SERVING_BUILD_IMAGE} as build_image
 FROM ubuntu:18.04
